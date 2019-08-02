@@ -15,6 +15,17 @@ BUFFER_SIZE = 400
 BATCH_SIZE = 1
 IMG_WIDTH = 256
 IMG_HEIGHT = 256
+MODEL_SIZE = 'XS'  # XS, S, L
+test_epoch = 50
+pretrained_model_path = './training_checkpoints_{}/ckpt_{}-{}'.format(MODEL_SIZE, MODEL_SIZE,
+                                                                      test_epoch // 10)
+
+if MODEL_SIZE == 'XS':
+    compress_ratio = 8
+elif MODEL_SIZE == 'S':
+    compress_ratio = 4
+elif MODEL_SIZE == 'L':
+    compress_ratio = 1
 
 
 def load_image(image_file, is_train):
@@ -122,22 +133,22 @@ class Generator(tf.keras.Model):
         super(Generator, self).__init__()
         initializer = tf.random_normal_initializer(0., 0.02)
 
-        self.down1 = Downsample(64 // 4, 4, apply_batchnorm=False)
-        self.down2 = Downsample(128 // 4, 4)
-        self.down3 = Downsample(256 // 4, 4)
-        self.down4 = Downsample(512 // 4, 4)
-        self.down5 = Downsample(512 // 4, 4)
-        self.down6 = Downsample(512 // 4, 4)
-        self.down7 = Downsample(512 // 4, 4)
-        self.down8 = Downsample(512 // 4, 4)
+        self.down1 = Downsample(64 // compress_ratio, 4, apply_batchnorm=False)
+        self.down2 = Downsample(128 // compress_ratio, 4)
+        self.down3 = Downsample(256 // compress_ratio, 4)
+        self.down4 = Downsample(512 // compress_ratio, 4)
+        self.down5 = Downsample(512 // compress_ratio, 4)
+        self.down6 = Downsample(512 // compress_ratio, 4)
+        self.down7 = Downsample(512 // compress_ratio, 4)
+        self.down8 = Downsample(512 // compress_ratio, 4)
 
-        self.up1 = Upsample(512 // 4, 4, apply_dropout=True)
-        self.up2 = Upsample(512 // 4, 4, apply_dropout=True)
-        self.up3 = Upsample(512 // 4, 4, apply_dropout=True)
-        self.up4 = Upsample(512 // 4, 4)
-        self.up5 = Upsample(256 // 4, 4)
-        self.up6 = Upsample(128 // 4, 4)
-        self.up7 = Upsample(64 // 4, 4)
+        self.up1 = Upsample(512 // compress_ratio, 4, apply_dropout=True)
+        self.up2 = Upsample(512 // compress_ratio, 4, apply_dropout=True)
+        self.up3 = Upsample(512 // compress_ratio, 4, apply_dropout=True)
+        self.up4 = Upsample(512 // compress_ratio, 4)
+        self.up5 = Upsample(256 // compress_ratio, 4)
+        self.up6 = Upsample(128 // compress_ratio, 4)
+        self.up7 = Upsample(64 // compress_ratio, 4)
 
         self.last = tf.keras.layers.Conv2DTranspose(OUTPUT_CHANNELS, (4, 4), strides=2,
                                                     padding='same', kernel_initializer=initializer)
@@ -192,14 +203,14 @@ class Discriminator(tf.keras.Model):
         super(Discriminator, self).__init__()
         initializer = tf.random_normal_initializer(0., 0.02)
 
-        self.down1 = DiscDownsample(64 // 4, 4, False)
-        self.down2 = DiscDownsample(128 // 4, 4)
-        self.down3 = DiscDownsample(256 // 4, 4)
+        self.down1 = DiscDownsample(64 // compress_ratio, 4, False)
+        self.down2 = DiscDownsample(128 // compress_ratio, 4)
+        self.down3 = DiscDownsample(256 // compress_ratio, 4)
 
         # we are zero padding here with 1 because we need our shape to
         # go from (batch_size, 32, 32, 256) to (batch_size, 31, 31, 512)
         self.zero_pad1 = tf.keras.layers.ZeroPadding2D()
-        self.conv = tf.keras.layers.Conv2D(512 // 4, (4, 4), strides=1,
+        self.conv = tf.keras.layers.Conv2D(512 // compress_ratio, (4, 4), strides=1,
                                            kernel_initializer=initializer, use_bias=False)
         self.batchnorm1 = tf.keras.layers.BatchNormalization()
 
@@ -239,7 +250,7 @@ LAMBDA = 100
 generator_optimizer = tf.train.AdamOptimizer(2e-4, beta1=0.5)
 discriminator_optimizer = tf.train.AdamOptimizer(2e-4, beta1=0.5)
 # Checkpoints (Object-based saving)
-checkpoint_dir = './training_checkpoints'
+checkpoint_dir = './training_checkpoints_old'
 checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
 checkpoint = tf.train.Checkpoint(generator_optimizer=generator_optimizer,
                                  discriminator_optimizer=discriminator_optimizer,
@@ -269,8 +280,10 @@ def generate_images(model, test_input, tar):
 
 # Restore the latest checkpoint and test
 # restoring the latest checkpoint in checkpoint_dir
-checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+# checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+checkpoint.restore(pretrained_model_path)
+
 # Run the trained model on the entire test dataset
-print('OK')
+
 for inp, tar in test_dataset:
     generate_images(generator, inp, tar)
