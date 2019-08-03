@@ -8,6 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import PIL
 # from IPython.display import clear_output
+from warnings import simplefilter
+simplefilter(action='ignore', category=FutureWarning)
 
 # Load the dataset
 PATH = os.path.join(os.path.dirname('./'), 'facades/')
@@ -15,7 +17,7 @@ BUFFER_SIZE = 400
 BATCH_SIZE = 1
 IMG_WIDTH = 256
 IMG_HEIGHT = 256
-MODEL_SIZE = 'XS'  # XS, S, L
+MODEL_SIZE = 'S'  # XS, S, L
 test_epoch = 50
 pretrained_model_path = './training_checkpoints_{}/ckpt_{}-{}'.format(MODEL_SIZE, MODEL_SIZE,
                                                                       test_epoch // 10)

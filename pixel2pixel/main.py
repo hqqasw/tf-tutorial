@@ -8,6 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import PIL
 # from IPython.display import clear_output
+from warnings import simplefilter
+simplefilter(action='ignore', category=FutureWarning)
 
 # Load the dataset
 PATH = os.path.join(os.path.dirname('./'), 'facades/')
